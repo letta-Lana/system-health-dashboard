@@ -2,6 +2,10 @@ System Health Dashboard API
 Overview
 <!-- What it does, who it's for, the three endpoints -->
 
+A lightweight API that returns basic status information for engineers and automated monitoring 
+checks. It exposes three endpoints: /health (whether the service is up), /version 
+(the current application version) and /environment (the environment it’s running in). 
+
 Prerequisites
 <!-- Tools and versions needed -->
 
