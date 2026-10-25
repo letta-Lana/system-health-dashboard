@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from flask import Flask, jsonify, request 
 from datetime import datetime 
 import json
