@@ -23,6 +23,20 @@ Running tests
 
 Docker
 <!-- Build command, image tag format, run command with env var, verification -->
+To containerise the API, I first updated the last line of app.py so the app listens on 
+all network interfaces (host="0.0.0.0") with debug mode turned off. Without this, the app 
+only accepts connections from inside the container, so requests from the host machine fail even 
+with the port mapped. I then wrote a Dockerfile based on the official python:3.11-slim image 
+and added a .dockerignore to keep the virtual environment, Git history and cache files out of 
+the image. Finally, I built a versioned image (system-health-dashboard:1.0.0), ran it as a 
+container with APP_ENV=staging, and verified all three endpoints with curl.
+
+commands
+docker build -t system-health-dashboard:1.0.0 .
+docker run -d -p 5000:5000 -e APP_ENV=staging --name health-api system-health-dashboard:1.0.0
+curl http://localhost:5000/health
+curl http://localhost:5000/version
+curl http://localhost:5000/environment
 
 Jenkins pipeline
 <!-- Stages, how tagging works, what happens on test failure -->
