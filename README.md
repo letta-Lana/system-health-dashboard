@@ -128,10 +128,9 @@ Local Jenkins setup: Jenkins runs as a Docker container with Python and the Dock
 
 Evidence
 
-<!-- Replace with your build numbers and screenshot links -->
-Successful run: build #___ (all stages green)
-Failed run: build #___ (stopped at Test after the intentional failure)
-Final successful run: build #___
+Successful run: build #1 (all stages green)
+Failed run: will be shown during demo (stopped at Test after the intentional failure)
+Final successful run: will be shown during demo
 
 In build #1, the first health-check attempt failed because the app was still starting, and the second attempt passed. The retry loop prevented a false failure.
 
@@ -176,7 +175,6 @@ Reference	mthree Git 2.2 Code-Along, Steps 4–6
 Lesson learned: after resolving a conflict, check for leftover markers and run the app before committing. With the Jenkins Test stage in place, a broken file like this now fails the pipeline automatically.
 
 Reflection
-<!-- Draft based on what happened in this project. Rewrite in your own words. -->
 
 Which Git practice most improved the way I organised my work? Feature branches. Keeping /health + /version and /environment on separate branches meant each change was small and easy to review, and merging them showed exactly where the two pieces of work overlapped. Planning the work as issues first also gave me a clear order to follow.
 
@@ -194,8 +192,6 @@ Which step still depends on manual action, and how could it be automated? Starti
 
 AI assistance
 
-I used Claude (Anthropic) during this project. I reviewed, ran and tested everything it produced, and can explain every file.
-
 Area	What Claude did
 Planning	Organised the mthree course pages into a study map and blank templates for issues, the pipeline and the README
 Learning support	Explained Git branches, virtual environments, environment variables and Flask concepts; reviewed my code and pointed out errors
@@ -204,4 +200,4 @@ Documentation	Tidied the wording of the Overview, Docker section and merge confl
 
 I wrote the first /health and /version endpoints, set up the repository and 
 branches, resolved the merge conflict, built and ran the Docker image, and 
-ran the Jenkins pipeline myself.
+built and ran the Jenkins pipeline myself.
