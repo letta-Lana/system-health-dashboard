@@ -154,7 +154,7 @@ feature/jenkins	Jenkinsfile
 
 Work was planned as GitHub Issues before coding started, and commits were kept small with action-oriented messages.
 
-Pull request: <!-- add the PR link --> develop → main, reviewed by <!-- reviewer name --> before merging.
+Pull request: https://github.com/letta-Lana/system-health-dashboard/pull/11 (develop → main), reviewed by kpashindla29 before merging.
 
 View the branch history with:
 
