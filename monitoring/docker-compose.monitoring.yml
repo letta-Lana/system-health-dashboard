@@ -1,0 +1,81 @@
+# Monitoring stack: Prometheus (metrics), Loki + Promtail (logs) and Grafana (dashboards).
+#
+# Start:  docker network create sre-monitoring      (once)
+#         cp .env.example .env  and set GRAFANA_ADMIN_PASSWORD
+#         docker compose -f docker-compose.monitoring.yml up -d
+#
+# Everything is provisioned from files in this folder; nothing needs configuring in the web UIs.
+# mem_limit keeps the whole stack small enough for an 8 GB laptop.
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Lets the alert rules be reloaded with: curl -X POST http://localhost:9090/-/reload
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    mem_limit: 512m
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.6.11
+    container_name: loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    mem_limit: 512m
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: promtail
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      # Read-only access to the Docker API so Promtail can discover and read container logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    mem_limit: 192m
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.2.5
+    container_name: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Copy .env.example to .env and set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    mem_limit: 640m
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+
+# Same external network as the app Compose files, so Prometheus reaches app-staging:5000 by name
+networks:
+  default:
+    name: sre-monitoring
+    external: true
