@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: system-health
+    metrics_path: /metrics
+    static_configs:
+      # Container names and the INTERNAL port (5000) on the shared Docker network.
+      # The host ports 5001 and 5002 do not exist inside the network, and localhost would be Prometheus itself.
+      - targets: ["app-staging:5000"]
+        labels:
+          environment: staging
+      - targets: ["app-production:5000"]
+        labels:
+          environment: production
+# Note: app_info also carries an "environment" label. Prometheus keeps the target label above and
+# renames the app's own to exported_environment, which is expected behaviour.
