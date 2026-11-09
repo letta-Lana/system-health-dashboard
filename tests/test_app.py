@@ -1,4 +1,6 @@
 import pytest
+from prometheus_client import REGISTRY
+
 from app import app
 
 
@@ -44,3 +46,33 @@ def test_environment_variable_takes_priority_over_app_env(client, monkeypatch):
 def test_unknown_route_returns_404(client):
     response = client.get("/does-not-exist")
     assert response.status_code == 404
+
+
+def test_metrics_endpoint_returns_prometheus_text(client):
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/plain")
+    assert b"http_requests_total" in response.data
+    assert b"http_request_duration_seconds" in response.data
+
+
+def test_request_counter_increments(client):
+    labels = {"method": "GET", "endpoint": "/health", "status": "200"}
+    before = REGISTRY.get_sample_value("http_requests_total", labels) or 0
+    client.get("/health")
+    assert REGISTRY.get_sample_value("http_requests_total", labels) == before + 1
+
+
+def test_unknown_routes_share_one_endpoint_label(client):
+    labels = {"method": "GET", "endpoint": "unknown", "status": "404"}
+    before = REGISTRY.get_sample_value("http_requests_total", labels) or 0
+    client.get("/no-such-page-1")
+    client.get("/no-such-page-2")
+    assert REGISTRY.get_sample_value("http_requests_total", labels) == before + 2
+
+
+def test_latency_histogram_records_observations(client):
+    labels = {"endpoint": "/version"}
+    before = REGISTRY.get_sample_value("http_request_duration_seconds_count", labels) or 0
+    client.get("/version")
+    assert REGISTRY.get_sample_value("http_request_duration_seconds_count", labels) == before + 1
