@@ -1,0 +1,26 @@
+# Production environment: the API on host port 5002, ENVIRONMENT=production.
+#
+# Deploy the SAME image tag that passed staging (never rebuild for production):
+#   IMAGE_TAG=<build number> docker compose -p production -f docker-compose.production.yml up -d
+#
+# The shared network is created once with:  docker network create sre-monitoring
+services:
+  app-production:
+    image: system-health:${IMAGE_TAG:-latest}
+    container_name: app-production
+    environment:
+      ENVIRONMENT: production
+      APP_VERSION: ${APP_VERSION:-2.0.0}
+      # Fixed to false on purpose: fault injection must never be switchable in production
+      ENABLE_FAULT_INJECTION: "false"
+    ports:
+      - "5002:5000"
+    labels:
+      app: system-health
+      environment: production
+    restart: unless-stopped
+
+networks:
+  default:
+    name: sre-monitoring
+    external: true
