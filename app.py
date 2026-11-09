@@ -1,4 +1,4 @@
-from flask import Flask, Response, g, jsonify, request
+from flask import Flask, Response, abort, g, jsonify, request
 from datetime import datetime, timezone
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 import json
@@ -112,6 +112,15 @@ def environment():
         "environment": get_environment(),
         "hostname": socket.gethostname()
     })
+
+
+@app.route("/simulate-error")
+def simulate_error():
+    # Incident-drill endpoint. Read per request so it can be switched without a code change.
+    if os.environ.get("ENABLE_FAULT_INJECTION", "false").lower() != "true":
+        abort(404)
+    g.log_message = "Simulated fault injected"
+    return jsonify({"error": "Simulated internal error"}), 500
 
 
 @app.route("/metrics")
