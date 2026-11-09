@@ -1,0 +1,28 @@
+# Staging environment: the API on host port 5001, ENVIRONMENT=staging.
+#
+# Deploy a build (always pass -p so staging and production stay separate projects):
+#   IMAGE_TAG=<build number> docker compose -p staging -f docker-compose.staging.yml up -d
+#
+# The shared network is created once with:  docker network create sre-monitoring
+# Prometheus and Promtail join the same network, so Prometheus scrapes app-staging:5000 by name.
+services:
+  app-staging:
+    image: system-health:${IMAGE_TAG:-latest}
+    container_name: app-staging
+    environment:
+      ENVIRONMENT: staging
+      APP_VERSION: ${APP_VERSION:-2.0.0}
+      # Off by default. The incident drill turns it on for staging only.
+      ENABLE_FAULT_INJECTION: ${ENABLE_FAULT_INJECTION:-false}
+    ports:
+      - "5001:5000"
+    # Promtail turns these labels into Loki labels so logs can be filtered per environment
+    labels:
+      app: system-health
+      environment: staging
+    restart: unless-stopped
+
+networks:
+  default:
+    name: sre-monitoring
+    external: true
