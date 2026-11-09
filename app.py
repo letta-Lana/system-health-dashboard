@@ -12,6 +12,11 @@ APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
 START_TIME = time.time()
 
 
+def get_environment():
+    # ENVIRONMENT wins; APP_ENV is still honoured so Mini Project 1 setups keep working
+    return os.environ.get("ENVIRONMENT") or os.environ.get("APP_ENV", "development")
+
+
 @app.route("/health")
 def health():
     uptime = round(time.time() - START_TIME, 1)
@@ -32,9 +37,8 @@ def version():
 
 @app.route("/environment")
 def environment():
-    current_env = os.environ.get("APP_ENV", "development")
     return jsonify({
-        "environment": current_env,
+        "environment": get_environment(),
         "hostname": socket.gethostname()
     })
 
