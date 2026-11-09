@@ -68,7 +68,7 @@ flowchart LR
 | Git | 2.x | Version control |
 | Python | 3.11 or later | Running the app and tests locally |
 | Docker Desktop (with Compose v2) | Current | Building images, running both environments and the monitoring stack |
-| Jenkins | LTS (run locally in Docker) | CI/CD pipeline. It needs the Docker CLI **and the Docker Compose plugin**, and the host's Docker socket mounted |
+| Jenkins | LTS (run locally in Docker) | CI/CD pipeline. It needs the Docker CLI **and the Docker Compose plugin**, and the host's Docker socket mounted. The Mini Project 1 image had no Compose plugin: build `jenkins/Dockerfile` to add it (see [Jenkins pipeline](#jenkins-pipeline)) |
 | curl | Any | Verifying endpoints and running the smoke test |
 | Bash | Any (Git Bash on Windows) | Running `scripts/smoke_test.sh` and `scripts/rollback.sh` |
 
@@ -341,7 +341,19 @@ The `Jenkinsfile` defines a declarative pipeline. The job uses **Pipeline script
 
 **Failure handling.** A failing test stops the pipeline before an image is built. A failing smoke test fails the build and triggers the rollback.
 
-**Local Jenkins setup.** Jenkins runs as a Docker container with Python, the Docker CLI and the Docker Compose plugin added, and with the host's Docker socket mounted. Because Jenkins is itself a container, it reaches the apps and Prometheus through `host.docker.internal` rather than `localhost`. Confirm this before the first run: add a scratch step with `docker version && docker compose version`.
+**Local Jenkins setup.** Jenkins runs as a Docker container with Python and the Docker CLI added, and with the host's Docker socket mounted. Because Jenkins is itself a container, it reaches the apps and Prometheus through `host.docker.internal` rather than `localhost`.
+
+**Jenkins needs the Docker Compose plugin.** The Mini Project 1 Jenkins image has the Docker CLI but no Compose plugin, so `docker compose` fails with "'compose' is not a docker command". `jenkins/Dockerfile` extends that image with the plugin:
+
+```bash
+docker build -t jenkins-local:compose -f jenkins/Dockerfile --build-arg BASE=jenkins-local .
+```
+
+Then recreate the Jenkins container from `jenkins-local:compose` with the same volume, ports and Docker socket mount as before, and confirm:
+
+```bash
+docker exec <jenkins-container> docker compose version
+```
 
 **No secrets in the Jenkinsfile.** The pipeline needs none: images stay on the local Docker host and the Grafana password lives in the untracked `monitoring/.env`. If a registry or token is added later, store it in Jenkins credentials and read it with `withCredentials`.
 
@@ -423,7 +435,7 @@ Branches used:
 | `feature/docker` | Dockerfile and `.dockerignore` (Mini Project 1) |
 | `feature/jenkins` | Jenkinsfile (Mini Project 1) |
 | `feature/metrics` | `/metrics`, the three required metrics plus uptime, JSON logs, `/simulate-error`, new tests |
-| `feature/cd-pipeline` | Staging and production Compose files, smoke test and rollback scripts, the extended Jenkinsfile |
+| `feature/cd-pipeline` | Staging and production Compose files, smoke test and rollback scripts, the extended Jenkinsfile, and a Jenkins image extension that adds the Compose plugin |
 | `feature/monitoring-stack` | Prometheus, Loki, Promtail and Grafana configuration, alert rules and the provisioned dashboard |
 | `feature/docs` | README, `INCIDENT.md` and `REFLECTION.md` templates, screenshots checklist |
 
@@ -490,9 +502,9 @@ Claude (Claude Code, model Claude Sonnet 5.5) wrote the second half of this proj
 | Area | What Claude did |
 |------|-----------------|
 | Application | Added `/metrics` and the metrics, JSON request logging, `/simulate-error`, the `ENVIRONMENT` setting and the new tests |
-| Environments and pipeline | Wrote both Compose files, `scripts/smoke_test.sh`, `scripts/rollback.sh` and the extended `Jenkinsfile` |
+| Environments and pipeline | Wrote both Compose files, `scripts/smoke_test.sh`, `scripts/rollback.sh`, the extended `Jenkinsfile` and `jenkins/Dockerfile` (found that the existing Jenkins image had no Compose plugin) |
 | Monitoring | Wrote the monitoring Compose file, Prometheus, Loki and Promtail configuration, the alert rules, the Grafana provisioning files and the dashboard JSON |
-| Testing | Ran the test suite, started both environments and the monitoring stack in Docker, and checked the endpoints, smoke test, targets, rules, logs and dashboard against the running system |
+| Testing | Ran the test suite, started both environments and the monitoring stack in Docker, and checked the endpoints, smoke test, rollback script, targets, alert rules, logs and dashboard against the running system. Also repeated the stack start from a fresh clone, and replayed the pipeline's deploy steps from inside the Jenkins image. These were tooling checks: the Jenkins pipeline itself was not run, and the incident drill evidence is the learner's own |
 | Documentation | Wrote this README, the architecture diagram and the `INCIDENT.md`, `REFLECTION.md` and screenshots templates |
 
 Not done by Claude: the Jenkins pipeline runs, the approval, the rollback demonstration, the incident drill with its timeline, the screenshots and the reflection answers. These must be performed and written by the learner from their own running system.
