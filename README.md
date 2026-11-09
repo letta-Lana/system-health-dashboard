@@ -42,7 +42,7 @@ Unknown routes return a JSON error with HTTP 404: `{"error": "Endpoint not found
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     Dev["Developer"] -->|"push / pull request"| GH["GitHub"]
     GH -->|"Jenkins polls for changes"| J["Jenkins pipeline"]
     J -->|"test, build once: system-health:N"| ST["Staging :5001"]
