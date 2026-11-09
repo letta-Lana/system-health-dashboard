@@ -56,6 +56,13 @@ def test_metrics_endpoint_returns_prometheus_text(client):
     assert b"http_request_duration_seconds" in response.data
 
 
+def test_metrics_include_app_info_and_uptime(client):
+    body = client.get("/metrics").data.decode()
+    assert 'app_info{environment="' in body
+    assert 'version="' in body
+    assert "app_uptime_seconds" in body
+
+
 def test_request_counter_increments(client):
     labels = {"method": "GET", "endpoint": "/health", "status": "200"}
     before = REGISTRY.get_sample_value("http_requests_total", labels) or 0
