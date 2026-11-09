@@ -1,0 +1,25 @@
+groups:
+  - name: system-health
+    rules:
+      # An application target has been unreachable for a full minute
+      - alert: ServiceDown
+        expr: up{job="system-health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.environment }} target {{ $labels.instance }} is down"
+
+      # More than 5% of responses were 5xx over the last 2 minutes, per environment.
+      # "for: 1m" stops a single short spike from firing the alert.
+      - alert: HighErrorRate
+        expr: |
+          sum by (environment) (rate(http_requests_total{status=~"5.."}[2m]))
+            /
+          sum by (environment) (rate(http_requests_total[2m]))
+            > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.environment }} 5xx rate is {{ $value | humanizePercentage }}"
