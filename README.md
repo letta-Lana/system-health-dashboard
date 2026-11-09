@@ -21,6 +21,7 @@ A small Flask API that reports its own health, and the delivery and monitoring s
 12. [Evidence](#evidence)
 13. [Git workflow](#git-workflow)
 14. [Reflections](#reflections)
+15. [AI assistance](#ai-assistance)
 
 ## Overview
 
@@ -480,3 +481,10 @@ The Mini Project 2 reflection (five questions) is in [`REFLECTION.md`](REFLECTIO
 - Enforce branch protection on `main` so changes require an approved PR
 
 **Which step still depends on manual action, and how could it be automated?** Starting Jenkins builds. I clicked Build Now after each push. A GitHub webhook or a multibranch pipeline could trigger builds automatically on every push and run the tests on pull requests before review. Deployment after a successful build is also manual and could become a pipeline stage. (Mini Project 2 adds that deployment stage and polling.)
+
+## AI assistance
+
+- **Mini Project 1:** Claude helped with planning, explanations, the `/environment` route and README wording. I wrote the rest.
+- **Mini Project 2:** Claude (Claude Code, Sonnet 5.5) wrote the code, configuration, tests and documentation for this release: the metrics and logging in `app.py`, both Compose files, the scripts, the Jenkinsfile, `jenkins/Dockerfile`, the monitoring configuration, the dashboard and this README.
+- Claude also ran the tests and checked the stack in Docker. It did not run the Jenkins pipeline.
+- Not written by Claude: the Jenkins runs, the screenshots, `INCIDENT.md` and `REFLECTION.md`. These come from my own runs and my own words.
