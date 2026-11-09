@@ -108,6 +108,33 @@ def test_unknown_route_is_logged_as_warning(client, captured_logs):
     assert entry["path"] == "/does-not-exist"
 
 
+def test_simulate_error_is_404_when_fault_injection_is_off(client, monkeypatch):
+    monkeypatch.delenv("ENABLE_FAULT_INJECTION", raising=False)
+    assert client.get("/simulate-error").status_code == 404
+    monkeypatch.setenv("ENABLE_FAULT_INJECTION", "false")
+    assert client.get("/simulate-error").status_code == 404
+
+
+def test_simulate_error_returns_500_when_fault_injection_is_on(client, monkeypatch):
+    monkeypatch.setenv("ENABLE_FAULT_INJECTION", "true")
+    response = client.get("/simulate-error")
+    assert response.status_code == 500
+    assert "error" in response.get_json()
+
+
+def test_simulate_error_is_logged_at_error_level_and_counted(client, captured_logs, monkeypatch):
+    monkeypatch.setenv("ENABLE_FAULT_INJECTION", "true")
+    labels = {"method": "GET", "endpoint": "/simulate-error", "status": "500"}
+    before = REGISTRY.get_sample_value("http_requests_total", labels) or 0
+    client.get("/simulate-error")
+    entry = json.loads(captured_logs[0])
+    assert entry["level"] == "ERROR"
+    assert entry["endpoint"] == "/simulate-error"
+    assert entry["status"] == 500
+    assert entry["message"] == "Simulated fault injected"
+    assert REGISTRY.get_sample_value("http_requests_total", labels) == before + 1
+
+
 def test_request_counter_increments(client):
     labels = {"method": "GET", "endpoint": "/health", "status": "200"}
     before = REGISTRY.get_sample_value("http_requests_total", labels) or 0
