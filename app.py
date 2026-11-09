@@ -1,6 +1,6 @@
 from flask import Flask, Response, g, jsonify, request
 from datetime import datetime, timezone
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 import os
 import socket
 import time
@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 #Settings read once when the app starts
 APP_NAME = "system-health-dashboard"
-APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
+APP_VERSION = os.environ.get("APP_VERSION", "2.0.0")
 START_TIME = time.time()
 
 
@@ -25,6 +25,14 @@ REQUESTS = Counter(
 LATENCY = Histogram(
     "http_request_duration_seconds", "Request latency in seconds", ["endpoint"]
 )
+# Info-style gauge: the value is always 1, the information is in the labels
+APP_INFO = Gauge(
+    "app_info", "Running version and environment (value is always 1)", ["version", "environment"]
+)
+APP_INFO.labels(APP_VERSION, get_environment()).set(1)
+# Custom metric: resets to 0 on every restart, so a drop shows a crash or a redeploy
+UPTIME = Gauge("app_uptime_seconds", "Seconds since the app started")
+UPTIME.set_function(lambda: time.time() - START_TIME)
 
 
 def endpoint_label():
