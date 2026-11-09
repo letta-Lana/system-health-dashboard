@@ -1,8 +1,11 @@
 from flask import Flask, Response, g, jsonify, request
 from datetime import datetime, timezone
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+import json
+import logging
 import os
 import socket
+import sys
 import time
 
 app = Flask(__name__)
@@ -16,6 +19,36 @@ START_TIME = time.time()
 def get_environment():
     # ENVIRONMENT wins; APP_ENV is still honoured so Mini Project 1 setups keep working
     return os.environ.get("ENVIRONMENT") or os.environ.get("APP_ENV", "development")
+
+
+# Structured logging: one JSON object per line on stdout, so Docker and Promtail can collect it
+logger = logging.getLogger("system-health")
+logger.setLevel(logging.INFO)
+logger.propagate = False
+_stdout_handler = logging.StreamHandler(sys.stdout)
+_stdout_handler.setFormatter(logging.Formatter("%(message)s"))
+logger.addHandler(_stdout_handler)
+# Werkzeug's own access log is plain text; our JSON line replaces it
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+
+def log_request(endpoint, status):
+    if status >= 500:
+        level = "ERROR"
+    elif status >= 400:
+        level = "WARNING"
+    else:
+        level = "INFO"
+    logger.log(getattr(logging, level), json.dumps({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "level": level,
+        "message": g.get("log_message", "request completed"),
+        "endpoint": endpoint,
+        "path": request.path,
+        "method": request.method,
+        "status": status,
+        "environment": get_environment(),
+    }))
 
 
 # Prometheus metrics. prometheus_client adds the _total suffix to counters itself.
@@ -51,6 +84,7 @@ def record_request(response):
     endpoint = endpoint_label()
     REQUESTS.labels(request.method, endpoint, str(response.status_code)).inc()
     LATENCY.labels(endpoint).observe(time.perf_counter() - g.get("start", time.perf_counter()))
+    log_request(endpoint, response.status_code)
     return response
 
 
@@ -91,4 +125,7 @@ def not_found(error):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # run_simple instead of app.run: app.run prints a plain-text banner that would break the JSON-only stdout
+    from werkzeug.serving import run_simple
+
+    run_simple("0.0.0.0", 5000, app, threaded=True)

@@ -1,7 +1,30 @@
+import json
+import logging
+
 import pytest
 from prometheus_client import REGISTRY
 
 from app import app
+
+
+class ListHandler(logging.Handler):
+    """Collects the raw log messages so a test can inspect them."""
+
+    def __init__(self):
+        super().__init__()
+        self.lines = []
+
+    def emit(self, record):
+        self.lines.append(record.getMessage())
+
+
+@pytest.fixture
+def captured_logs():
+    handler = ListHandler()
+    logger = logging.getLogger("system-health")
+    logger.addHandler(handler)
+    yield handler.lines
+    logger.removeHandler(handler)
 
 
 @pytest.fixture
@@ -61,6 +84,28 @@ def test_metrics_include_app_info_and_uptime(client):
     assert 'app_info{environment="' in body
     assert 'version="' in body
     assert "app_uptime_seconds" in body
+
+
+def test_each_request_writes_one_valid_json_log_line(client, captured_logs, monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "staging")
+    client.get("/health")
+    assert len(captured_logs) == 1
+    entry = json.loads(captured_logs[0])
+    for field in ("timestamp", "level", "message", "endpoint", "method", "status", "environment"):
+        assert field in entry
+    assert entry["level"] == "INFO"
+    assert entry["endpoint"] == "/health"
+    assert entry["method"] == "GET"
+    assert entry["status"] == 200
+    assert entry["environment"] == "staging"
+
+
+def test_unknown_route_is_logged_as_warning(client, captured_logs):
+    client.get("/does-not-exist")
+    entry = json.loads(captured_logs[0])
+    assert entry["level"] == "WARNING"
+    assert entry["status"] == 404
+    assert entry["path"] == "/does-not-exist"
 
 
 def test_request_counter_increments(client):
